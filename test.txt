@@ -1,7 +1,0 @@
-Makefile
-README.md
-a.out
-main.cpp
-status.txt
-test.h
-test.txt
