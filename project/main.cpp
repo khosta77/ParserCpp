@@ -1,6 +1,9 @@
 #include <iostream>
 #include <curl/curl.h>
 //#include <gsoup.h>
+//#include <gsoap/soapH.h> // Замени на актуальный заголовочный файл gSOAP
+#include <gsoap/soaphttp.h>
+#include <gsoap/sa.h>
 
 const std::string url = "https://ru.investing.com/indices/mcx";
 
@@ -10,6 +13,18 @@ size_t WriteCallback( void* contents, size_t size, size_t nmemb, std::string* ou
     size_t total_size = size * nmemb;
     output->append(static_cast<char*>(contents), total_size);
     return total_size;
+}
+
+std::string get_div_content(const std::string& html, const std::string& div_id) {
+    size_t start = html.find("<div id=" + div_id + ">");
+    if (start == std::string::npos) return "";
+
+    start += 19 + div_id.length(); // Длина "<div id=""
+    size_t end = html.find("</div>", start);
+
+    if (end == std::string::npos) return "";
+
+    return html.substr(start, end - start);
 }
 
 
@@ -35,13 +50,18 @@ int main()
             std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
         else
         {
-            std::cout << readBuffer << std::endl;
+            //std::cout << readBuffer << std::endl;
         }
         curl_easy_cleanup(curl);
     }
     curl_global_cleanup();
 
-    
+#if 1
+    std::string div_content = get_div_content(readBuffer, "myDiv");
+
+    std::cout << "Content of div: " << div_content << std::endl;
+
+#endif
 
     return 0;
 }
