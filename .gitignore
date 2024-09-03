@@ -1,0 +1,11 @@
+# Системные файлы
+.DS_Store
+
+# Выход программы
+*.out
+
+# Файлы CMAKE
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
