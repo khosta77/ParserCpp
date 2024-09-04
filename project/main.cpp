@@ -1,9 +1,9 @@
 #include <iostream>
+#include <chrono>
+#include <string>
+#include <regex>
+
 #include <curl/curl.h>
-//#include <gsoup.h>
-//#include <gsoap/soapH.h> // Замени на актуальный заголовочный файл gSOAP
-#include <gsoap/soaphttp.h>
-#include <gsoap/sa.h>
 
 const std::string url = "https://ru.investing.com/indices/mcx";
 
@@ -15,55 +15,57 @@ size_t WriteCallback( void* contents, size_t size, size_t nmemb, std::string* ou
     return total_size;
 }
 
-std::string get_div_content(const std::string& html, const std::string& div_id) {
-    size_t start = html.find("<div id=" + div_id + ">");
-    if (start == std::string::npos) return "";
+float parsePrice(const std::string& content)
+{
+    std::regex regex( R"(<div[^>]*data-test=["']instrument-price-last["'][^>]*>(.*?)</div>)" );
+    std::smatch match;
 
-    start += 19 + div_id.length(); // Длина "<div id=""
-    size_t end = html.find("</div>", start);
-
-    if (end == std::string::npos) return "";
-
-    return html.substr(start, end - start);
+    if( std::regex_search(content, match, regex) && match.size() > 1 )
+	{
+        std::string priceStr = match[1].str();
+        priceStr.erase( std::remove( priceStr.begin(), priceStr.end(), '.' ), priceStr.end() );
+        std::replace( priceStr.begin(), priceStr.end(), ',', '.' );
+        return std::stof(priceStr);
+    }
+    throw;
 }
-
 
 int main()
 {
+	auto startAll = std::chrono::steady_clock::now();
+
     CURL *curl;
-    CURLcode res;
     std::string readBuffer;
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
+	auto startCurl = std::chrono::steady_clock::now();
 
     if(curl)
     {
         curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
-
-        // Установка функции обратного вызова для записи данных
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
 
-        res = curl_easy_perform(curl);
-        if( res != CURLE_OK )
+        if( CURLcode res = curl_easy_perform(curl); res != CURLE_OK )
             std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
-        else
-        {
-            //std::cout << readBuffer << std::endl;
-        }
-        curl_easy_cleanup(curl);
     }
+    auto endCurl = std::chrono::steady_clock::now();
+
+	auto startParse = std::chrono::steady_clock::now();
+    float price = parsePrice(readBuffer);
+    auto endAll = std::chrono::steady_clock::now();
+    std::chrono::duration<double> diffAll = endAll - startAll;
+    std::chrono::duration<double> diffCurl = endCurl - startCurl;
+    std::chrono::duration<double> diffParse = endAll - startParse;
+    
+    std::cout << "Time taken: " << diffCurl.count() << " seconds" << std::endl;
+    std::cout << "Time taken: " << diffParse.count() << " seconds" << std::endl;
+    std::cout << "Time taken: " << diffAll.count() << " seconds" << std::endl;
+	std::cout << price << std::endl;
+    curl_easy_cleanup(curl);
     curl_global_cleanup();
-
-#if 1
-    std::string div_content = get_div_content(readBuffer, "myDiv");
-
-    std::cout << "Content of div: " << div_content << std::endl;
-
-#endif
-
-    return 0;
+	return 0;
 }
 
 
