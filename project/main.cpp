@@ -5,6 +5,7 @@
 
 #include <curl/curl.h>
 
+
 //const std::string URL = "https://ru.investing.com/indices/us-spx-500";
 const std::string URL = "https://www.labirint.ru/books/877234/";
 //const std::string URL = "https://ru.investing.com/search";
@@ -59,6 +60,74 @@ public:
     }
 };
 
+#if 0
+namespace beast = boost::beast;          // изолируем экспозицию boost::beast
+namespace http = beast::http;            // изолируем экспозицию boost::beast::http
+namespace net = boost::asio;              // изолируем экспозицию boost::asio
+using tcp = net::ip::tcp;                // изолируем экспозицию boost::asio::ip::tcp
+
+// Функция для выполнения GET запроса
+std::string http_get(const std::string& url) {
+    // Разделение URL на компоненты
+    auto const pos = url.find("://");
+    if (pos == std::string::npos) {
+        throw std::runtime_error("Invalid URL: " + url);
+    }
+
+    // Получаем протокол и сдвигаем указатель после "://"
+    std::string protocol = url.substr(0, pos);
+    std::string remaining_url = url.substr(pos + 3);
+
+    // Разделяем оставшуюся часть на имя хоста и путь
+    auto const path_start = remaining_url.find('/');
+    std::string host = (path_start == std::string::npos) ? remaining_url : remaining_url.substr(0, path_start);
+    std::string path = (path_start == std::string::npos) ? "/" : remaining_url.substr(path_start);
+
+    // Создаем контекст io и сокет
+    net::io_context io_context;
+
+    // Разрешаем имя хоста
+    tcp::resolver resolver(io_context);
+    auto const results = resolver.resolve(host, protocol == "https" ? "443" : "80");
+
+    // Создаем и заполняем HTTP-запрос
+    beast::tcp_stream stream(io_context);
+    net::connect(stream.socket(), results.begin(), results.end());
+
+    // Если используем https, оборачиваем в secure stream
+    if (protocol == "https") {
+        stream = beast::ssl_stream<beast::tcp_stream>(std::move(stream), boost::asio::ssl::context(boost::asio::ssl::context::sslv23));
+        boost::asio::ssl::stream_base::handshake_type handshake_type = boost::asio::ssl::stream_base::client;
+        static_cast<beast::ssl_stream<beast::tcp_stream>&>(stream).handshake(handshake_type);
+    }
+
+    // Составляем запрос
+    http::request<http::string_body> req(http::verb::get, path, 11);
+    req.set(http::field::host, host);
+    req.set(http::field::user_agent, "Boost.Beast/1.81.0"); // Укажите вашу версию Boost.Beast
+
+    // Отправляем запрос
+    http::write(stream, req);
+
+    // Получаем ответ
+    beast::flat_buffer buffer;
+    http::response<http::string_body> res;
+    http::read(stream, buffer, res);
+
+    // Закрываем соединение
+    beast::error_code ec;
+    stream.socket().shutdown(tcp::socket::shutdown_both, ec);
+
+    // Если ошибка, выводим её
+    if (ec && ec != beast::errc::not_connected) {
+        throw beast::system_error{ec};
+    }
+
+    // Возвращаем ответ
+    return res.body();
+}
+#endif
+
 
 //<a class="js-inner-all-results-quote-item row" href="/equities/mts_rts">
 //  <span class="flag first"><i class="ceFlags middle Russian_Federation"></i></span>
@@ -86,7 +155,6 @@ std::string parseHref( const std::string& content, const std::string& _class = "
     const std::string triggerLeft = ( "<" + _class );
     const std::string triggerRight = ( "</" + _class + ">" );
     const std::string key = ( _code + "=\"" + _value + "\"" );
-    std::
     std::string message = "";
     size_t count = 0;
     size_t i = 0, j = 0;
@@ -179,10 +247,7 @@ int main()
 {
     std::string content = request.GET(URL);
     std::cout << parseHref(content) << std::endl;
-    //std::string href = parseHref(content);
-    //float price = parsePrice(content);
-	//std::cout << href << std::endl;
-	return 0;
+    return 0;
 }
 
 
