@@ -12,7 +12,7 @@ const std::string URL = "https://www.labirint.ru/books/877234/";
 class Request
 {
 public:
-    virtual std::string GET( const std::string& ) = 0;
+    virtual std::string GET( const std::string&, const std::vector<std::string>& ) = 0;
 };
 
 class RequestCurl : public Request
@@ -24,35 +24,48 @@ private:
     // Функция обратного вызова для записи данных, полученных от curl
     static size_t WriteCallback( void* contents, size_t size, size_t nmemb, std::string* output )
     {
-        size_t total_size = size * nmemb;
+        size_t total_size = size * nmemb;  // TODO: можно переделать
         output->append( static_cast<char*>(contents), total_size );
         return total_size;
     }
 
 public:
-    RequestCurl() : content("")
-    {
-        curl_global_init(CURL_GLOBAL_DEFAULT);
-        curl = curl_easy_init();
-    }
+    RequestCurl() : content("") {}
 
     ~RequestCurl()
     {
         curl_global_cleanup();
     }
     
-    std::string GET( const std::string& url ) override
+    std::string GET( const std::string& url, const std::vector<std::string>& headersVector = {} ) override
     {
+        curl_global_init(CURL_GLOBAL_DEFAULT);
+        curl = curl_easy_init();
+
         if(curl)
         {
             content.clear();
             curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &content);
+
+            if( !headersVector.empty() )
+            {
+                struct curl_slist* headers = nullptr;
+                for( const std::string& header : headersVector )
+                {
+                    //std::cout << header << std::endl;
+                    headers = curl_slist_append( headers, header.c_str() );
+                }
+                curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+            }
+
+            curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, WriteCallback );
+            curl_easy_setopt( curl, CURLOPT_WRITEDATA, &content );
 
             if( CURLcode res = curl_easy_perform(curl); res != CURLE_OK )
                 std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+
             curl_easy_cleanup(curl);
+            curl_global_cleanup();
             return content;
         }
         throw;
@@ -224,6 +237,13 @@ struct LabyrinthPage
     std::string isbn;  // ISBN: 978-5-9693-0549-6
     std::string pages;
     std::string pageType;  // Оффсет, бумага и т. д.
+
+    // ajax/design
+    std::string box;    // Тип упаковки
+    std::string covers;   // Тип обложки: 7Б - твердая (плотная бумага или картон)
+    std::string decoration;   // Оформление: Тиснение объемное
+    std::string illustrations;  // Иллюстрации: Черно-белые + цветные
+
     std::string weight;  // Масса
     int da;  // Размеры
     int db;
@@ -242,8 +262,17 @@ struct LabyrinthPage
     std::string RtB4;
     std::string RtB5;
 
-    LabyrinthPage( [[maybe_unused]] const std::string& content ) {}
-public:
+
+    LabyrinthPage( [[maybe_unused]] const int& idIn
+                   [[maybe_unused]] const std::string& product,
+                   [[maybe_unused]] const std::string& popup ) : id(idIn)
+    {
+
+    }
+
+    ~LabyrinthPage() {}
+private:
+    
 };
 
 int main()
@@ -252,10 +281,16 @@ int main()
     //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
     //std::cout << parseHref( content, "span", { { "class", "buying-pricenew-val-number" } } ) << std::endl;
     //std::cout << parseHref( content, "div", { { "id", "product-image" } } ) << std::endl;
-//    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
+    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
 //    std::cout << parseHref( content, "", { { "", "" } } ) << std::endl;
     //std::cout << request.GET("https://www.labirint.ru/ajax/design/781041/") << std::endl;
-    std::cout << scbs.parseHref( content, "div", { { "class", "popup" } } );
+    //std::cout << scbs.parseHref( content, "div", { { "class", "popup" } } );
+    std::cout << request.GET( "https://www.labirint.ru/ajax/design/877235/",
+                std::vector<std::string>{
+                    "X-Requested-With: XMLHttpRequest",
+                    "Referer: https://www.labirint.ru/books/0/"
+                }
+            );
     return 0;
 }
 
