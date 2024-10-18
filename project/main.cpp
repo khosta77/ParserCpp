@@ -193,15 +193,69 @@ SCBeautifulSoup scbs;
 
 
 */
+//class Parser
+//{
+    
+//}
+struct LabyrinthPage
+{
+    //// Получаем сразу
+    int id;                   // Id книги он же в ссылке справа
+    
+    //// Первое, что извлекаем
+    std::string typeObject;   // Объект: книга, игрушка и т. д.
+    std::string groupOfType;  // Типы объекта: Нехудож литер, игрушка и т д
+    std::string underGroup;   // Подгруппа типа: Информ технологии и т д
+    std::string genres;       // Жанр детально внутренний
+    
+    //// Обработка описания
+    std::string bookName;       // Название книги
+    
+    std::string authors;  // Авторы
+    std::string publisher; // Издатель
+    std::string datePublisher;  // Дата издания
+    std::string series;
+    std::string bookGenres;  // Жанр книг
+
+    float allPrice;     // цена для всех
+    float myPrice;      // моя цена
+    float sale;         // скидка
+    
+    std::string isbn;  // ISBN: 978-5-9693-0549-6
+    std::string pages;
+    std::string pageType;  // Оффсет, бумага и т. д.
+    std::string weight;  // Масса
+    int da;  // Размеры
+    int db;
+    int dc;
+    
+    std::string rate;
+    std::string rateSize;
+    std::string annotation;
+
+    std::string imgUrl;
+
+    // RtB Five reasons to buy
+    std::string RtB1;
+    std::string RtB2;
+    std::string RtB3;
+    std::string RtB4;
+    std::string RtB5;
+
+    LabyrinthPage( [[maybe_unused]] const std::string& content ) {}
+public:
+};
+
 int main()
 {
     std::string content = request.GET(URL);
     //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
     //std::cout << parseHref( content, "span", { { "class", "buying-pricenew-val-number" } } ) << std::endl;
     //std::cout << parseHref( content, "div", { { "id", "product-image" } } ) << std::endl;
-    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
+//    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
 //    std::cout << parseHref( content, "", { { "", "" } } ) << std::endl;
-
+    //std::cout << request.GET("https://www.labirint.ru/ajax/design/781041/") << std::endl;
+    std::cout << scbs.parseHref( content, "div", { { "class", "popup" } } );
     return 0;
 }
 
