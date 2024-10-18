@@ -164,11 +164,12 @@ public:
     SCBeautifulSoup( SCBeautifulSoup&& ) = delete;
     ~SCBeautifulSoup() = default;
 
-    std::string parseHref
+    std::pair<std::string, size_t> parseHref
     (
         const std::string& content,
         const std::string& object,
-        const std::vector<std::pair<std::string, std::string>> pairs
+        const std::vector<std::pair<std::string, std::string>> pairs,
+        const size_t& startPosition = 0
     )
     {
         // Триггеры начала и конца блока
@@ -177,7 +178,7 @@ public:
 
         // Ключевые слова
         const std::vector<std::string> keys = getKeyWords( pairs );
-        std::pair<std::string, size_t> block{ "", 0 };
+        std::pair<std::string, size_t> block{ "", startPosition };
 
         while( ( block.second = content.find( tL, block.second ) ) != std::string::npos )
         {
@@ -190,11 +191,11 @@ public:
 #endif
                 size_t posEndCurrent = findEndObject( content, block.second, tL, tR );
                 if( posEndCurrent == std::string::npos )
-                    return std::string("");
-                return content.substr( block.second, ( posEndCurrent - block.second ) );
+                    return { std::string(""), -1 };
+                return { content.substr( block.second, ( posEndCurrent - block.second ) ), posEndCurrent };
             }
         }
-        return std::string("");
+        return { std::string(""), -1 };
     }
 };
 
@@ -206,10 +207,38 @@ SCBeautifulSoup scbs;
 
 
 */
-//class Parser
-//{
-    
-//}
+class Parser
+{
+public:
+    static std::string unpack( const std::string& content )
+    {
+        // TODO: Переделать на stringstream
+        std::string text;
+        bool isMark = false;
+        for( auto symbol : content )
+        {
+            if( symbol == '<' )
+            {
+                isMark = true;
+                continue;
+            }
+
+            if( symbol == '>' )
+            {
+                isMark = false;
+                continue;
+            }
+
+            if( isMark )
+                continue;   
+
+            text += symbol;
+        }
+        return text;
+    }
+};
+
+
 struct LabyrinthPage
 {
     //// Получаем сразу
@@ -220,7 +249,7 @@ struct LabyrinthPage
     std::string groupOfType;  // Типы объекта: Нехудож литер, игрушка и т д
     std::string underGroup;   // Подгруппа типа: Информ технологии и т д
     std::string genres;       // Жанр детально внутренний
-    
+
     //// Обработка описания
     std::string bookName;       // Название книги
     
@@ -263,34 +292,81 @@ struct LabyrinthPage
     std::string RtB5;
 
 
-    LabyrinthPage( [[maybe_unused]] const int& idIn
+    LabyrinthPage( [[maybe_unused]] const int& idIn,
                    [[maybe_unused]] const std::string& product,
                    [[maybe_unused]] const std::string& popup ) : id(idIn)
     {
-
+        toExtractObject( product );
     }
 
-    ~LabyrinthPage() {}
+    ~LabyrinthPage() 
+    {
+        typeObject.clear();
+        groupOfType.clear();
+        underGroup.clear();
+        genres.clear();
+
+    }
 private:
-    
+    void toExtractObject( const std::string& product )
+    {
+        std::pair<std::string, size_t> label;
+        label = scbs.parseHref( product, "a", { { "itemprop", "item" } } );
+        typeObject = Parser::unpack(label.first);
+        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+        if( label.first.empty() )
+        {
+            groupOfType = "";
+            underGroup = "";
+            genres = "";
+            return;
+        }
+
+        label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second );
+        groupOfType = Parser::unpack(label.first);
+        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+        if( label.first.empty() )
+        {
+            underGroup = "";
+            genres = "";
+            return;
+        }
+
+        label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second  );
+        underGroup = Parser::unpack(label.first);
+        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+        if( label.first.empty() )
+        {
+            genres = "";
+            return;
+        }
+
+        label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second  );
+        genres = Parser::unpack(label.first);
+        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+    }
+};
+
+const std::vector<std::string> HEADERS = {
+    "X-Requested-With: XMLHttpRequest",
+    "Referer: https://www.labirint.ru/books/0/"
 };
 
 int main()
 {
-    std::string content = request.GET(URL);
+    const int id = 877234;
+    const std::string page = request.GET(URL);
+    const std::string project = scbs.parseHref( page, "div", { { "id", "product" } } ).first;
+    const std::string popup = request.GET( "https://www.labirint.ru/ajax/design/877234/", HEADERS );
+    LabyrinthPage( id, project, popup );
     //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
     //std::cout << parseHref( content, "span", { { "class", "buying-pricenew-val-number" } } ) << std::endl;
     //std::cout << parseHref( content, "div", { { "id", "product-image" } } ) << std::endl;
-    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
+//    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
 //    std::cout << parseHref( content, "", { { "", "" } } ) << std::endl;
     //std::cout << request.GET("https://www.labirint.ru/ajax/design/781041/") << std::endl;
     //std::cout << scbs.parseHref( content, "div", { { "class", "popup" } } );
-    std::cout << request.GET( "https://www.labirint.ru/ajax/design/877235/",
-                std::vector<std::string>{
-                    "X-Requested-With: XMLHttpRequest",
-                    "Referer: https://www.labirint.ru/books/0/"
-                }
-            );
+    //std::cout << request.GET( "https://www.labirint.ru/ajax/design/877234/", HEADERS );
     return 0;
 }
 
