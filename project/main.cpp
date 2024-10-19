@@ -184,7 +184,9 @@ public:
         while( ( block.second = content.find( tL, block.second ) ) != std::string::npos )
         {
             block = getBlockTitle( content, block.second );
-
+#if DEBUG
+            std::cout << "\t\tblock: " << block.first << std::endl;
+#endif
             if( !isKeysNpos( block.first, keys ) and !keys.empty() )  // TODO: Оптимизировать
             {
 #if DEBUG
@@ -203,6 +205,46 @@ public:
                     return { std::string(""), -1 };
                 return { content.substr( block.second, ( posEndCurrent - block.second ) ), posEndCurrent };
             }
+        }
+        return { std::string(""), -1 };
+    }
+
+
+    std::pair<std::string, size_t> parseHead
+    (
+        const std::string& content,
+        const std::string& object,
+        const std::vector<std::pair<std::string, std::string>> pairs,
+        const size_t& startPosition = 0
+    )
+    {
+#if DEBUG
+        std::cout << content << std::endl;
+#endif
+
+        if( pairs.empty() )
+            return { std::string(""), -1 };
+
+        // Триггеры начала и конца блока
+        const std::string tL = ( "<" + object );
+        const std::string tR = ( "</" + object + ">" );
+
+        // Ключевые слова
+        const std::vector<std::string> keys = getKeyWords( pairs );
+        std::pair<std::string, size_t> block{ "", startPosition };
+
+        while( ( block.second = content.find( tL, block.second ) ) != std::string::npos )
+        {
+            block = getBlockTitle( content, block.second );
+
+            if( !isKeysNpos( block.first, keys ) and !keys.empty() )  // TODO: Оптимизировать
+            {
+#if DEBUG
+                std::cout << block.first << std::endl;
+#endif
+                return { block.first, ( block.second + block.first.size() ) };
+            }
+            
         }
         return { std::string(""), -1 };
     }
@@ -262,6 +304,8 @@ struct LabyrinthPage
     //// Обработка описания
     std::string bookName;       // Название книги
     
+    std::string imgUrl;
+
     std::string authors;  // Авторы
     std::string publisher; // Издатель
     std::string datePublisher;  // Дата издания
@@ -291,8 +335,6 @@ struct LabyrinthPage
     std::string rateSize;
     std::string annotation;
 
-    std::string imgUrl;
-
     // RtB Five reasons to buy
     std::string RtB1;
     std::string RtB2;
@@ -311,7 +353,8 @@ struct LabyrinthPage
         toExtractBookName( product );
         //std::cout << bookName << std::endl;
 
-
+        toExtractImgUrl();
+        std::cout << imgUrl << std::endl;
     }
 
     ~LabyrinthPage() 
@@ -362,6 +405,11 @@ private:
             return;
         }
         bookName = _bookName;
+    }
+
+    void toExtractImgUrl()
+    {
+        imgUrl = "https://static10.labirint.ru/books/" + std::to_string( id ) + "/cover.jpg";
     }
 };
 
