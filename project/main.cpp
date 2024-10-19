@@ -306,12 +306,14 @@ struct LabyrinthPage
     
     std::string imgUrl;
 
+    //// Description
+    std::string age;
     std::string authors;  // Авторы
     std::string publisher; // Издатель
-    std::string datePublisher;  // Дата издания
+    int datePublisher;  // Дата издания
     std::string series;
     std::string bookGenres;  // Жанр книг
-
+    
     float allPrice;     // цена для всех
     float myPrice;      // моя цена
     float sale;         // скидка
@@ -320,22 +322,23 @@ struct LabyrinthPage
     std::string pages;
     std::string pageType;  // Оффсет, бумага и т. д.
 
-    // ajax/design
+    std::string weight;  // Масса
+    int da;  // Размеры
+    int db;
+    int dc;
+
+    //// ajax/design
     std::string box;    // Тип упаковки
     std::string covers;   // Тип обложки: 7Б - твердая (плотная бумага или картон)
     std::string decoration;   // Оформление: Тиснение объемное
     std::string illustrations;  // Иллюстрации: Черно-белые + цветные
 
-    std::string weight;  // Масса
-    int da;  // Размеры
-    int db;
-    int dc;
-    
+    //// rate
     std::string rate;
     std::string rateSize;
     std::string annotation;
 
-    // RtB Five reasons to buy
+    //// RtB Five reasons to buy
     std::string RtB1;
     std::string RtB2;
     std::string RtB3;
@@ -354,7 +357,10 @@ struct LabyrinthPage
         //std::cout << bookName << std::endl;
 
         toExtractImgUrl();
-        std::cout << imgUrl << std::endl;
+        //std::cout << imgUrl << std::endl;
+        
+        toExtractDescription( product );
+        std::cout << authors << ';' << publisher << ';' << datePublisher << ';' << series << std::endl;
     }
 
     ~LabyrinthPage() 
@@ -410,6 +416,28 @@ private:
     void toExtractImgUrl()
     {
         imgUrl = "https://static10.labirint.ru/books/" + std::to_string( id ) + "/cover.jpg";
+    }
+
+    void toExtractDescription( const std::string& product )
+    {
+        std::string _description  = scbs.parseHref( product, "div", { { "class", "product-description" } } ).first;
+        if( _description.empty() )
+            return;
+        age = scbs.parseHref( _description, "div", { { "id", "age_dopusk" } } ).first;
+        authors = scbs.parseHref( _description, "a", { { "data-event-label", "author" } } ).first;
+        auto _publisher = scbs.parseHref( _description, "a", { { "data-event-label", "publisher" } } );
+        publisher = _publisher.first;
+        datePublisher = std::stoi( _description.substr( ( _publisher.second + 6 ), 4 ) );
+
+//// TODO: Тут встатить : https://www.labirint.ru/books/1017284/
+
+
+        scbs.parseHref( _description, "span", { { "class", "buying-priceold-val-number" } } ).first.substr(6);
+        scbs.parseHref( _description, "span", { { "class", "buying-pricenew-val-number" } } ).first;
+        isbn = scbs.parseHref( _description, "div", { { "class", "isbn" } } ).first;
+        scbs.parseHref( _description, "div", { { "class", "pages2" } } ).first;
+        scbs.parseHref( _description, "div", { { "class", "weight" } } ).first;
+        scbs.parseHref( _description, "div", { { "class", "dimensions" } } ).first;
     }
 };
 
