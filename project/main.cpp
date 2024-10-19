@@ -35,6 +35,7 @@ public:
     ~RequestCurl()
     {
         curl_global_cleanup();
+        content.clear();
     }
     
     std::string GET( const std::string& url, const std::vector<std::string>& headersVector = {} ) override
@@ -184,11 +185,19 @@ public:
         {
             block = getBlockTitle( content, block.second );
 
-            if( !isKeysNpos( block.first, keys ) )
+            if( !isKeysNpos( block.first, keys ) and !keys.empty() )  // TODO: Оптимизировать
             {
 #if DEBUG
                 std::cout << block.first << std::endl;
 #endif
+                size_t posEndCurrent = findEndObject( content, block.second, tL, tR );
+                if( posEndCurrent == std::string::npos )
+                    return { std::string(""), -1 };
+                return { content.substr( block.second, ( posEndCurrent - block.second ) ), posEndCurrent };
+            }
+
+            if( keys.empty() )  // TODO: Оптимизировать
+            {
                 size_t posEndCurrent = findEndObject( content, block.second, tL, tR );
                 if( posEndCurrent == std::string::npos )
                     return { std::string(""), -1 };
@@ -297,6 +306,12 @@ struct LabyrinthPage
                    [[maybe_unused]] const std::string& popup ) : id(idIn)
     {
         toExtractObject( product );
+        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+
+        toExtractBookName( product );
+        //std::cout << bookName << std::endl;
+
+
     }
 
     ~LabyrinthPage() 
@@ -313,37 +328,40 @@ private:
         std::pair<std::string, size_t> label;
         label = scbs.parseHref( product, "a", { { "itemprop", "item" } } );
         typeObject = Parser::unpack(label.first);
-        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
         if( label.first.empty() )
-        {
-            groupOfType = "";
-            underGroup = "";
-            genres = "";
             return;
-        }
 
         label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second );
         groupOfType = Parser::unpack(label.first);
-        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
         if( label.first.empty() )
-        {
-            underGroup = "";
-            genres = "";
             return;
-        }
 
         label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second  );
         underGroup = Parser::unpack(label.first);
-        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
         if( label.first.empty() )
-        {
-            genres = "";
             return;
-        }
 
         label = scbs.parseHref( product, "a", { { "itemprop", "item" } }, label.second  );
         genres = Parser::unpack(label.first);
-        //std::cout << typeObject << ';' << groupOfType << ';' << underGroup << ';' << genres << std::endl;
+    }
+
+    void toExtractBookName( const std::string& product )
+    {
+        std::string _bookName = scbs.parseHref( product, "div", { { "id", "product-title" } } ).first;
+        if( _bookName.empty() )
+            return;
+
+        _bookName = scbs.parseHref( _bookName, "h1", {} ).first;
+        if( _bookName.empty() )
+            return;
+
+        size_t i = _bookName.find(':');
+        if( i != std::string::npos )
+        {
+            bookName = _bookName.substr( ( i + 2 ) );
+            return;
+        }
+        bookName = _bookName;
     }
 };
 
