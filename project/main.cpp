@@ -249,7 +249,7 @@ public:
         return { std::string(""), -1 };
     }
 
-    std::vector<std::string> split(const std::string &content, const char del)
+    std::vector<std::string> split(const std::string& content, const char& del)
     {
         std::vector<std::string> arrayString;
         std::string buffer = "";
@@ -267,6 +267,20 @@ public:
         buffer.clear();
         return arrayString;
     }
+
+    std::vector<std::string> split(const std::string& content, const std::string& del)
+    {
+        std::vector<std::string> arrayString;
+        size_t i = 0, j = content.find(del);
+        for( const size_t I = content.size(); i < I and j != std::string::npos; j = content.find( del, ( i + 1 ) ) )
+        {
+            arrayString.push_back( content.substr( i, ( j - i ) ) );
+            i = j;
+        }
+        arrayString.push_back( content.substr( ( i + del.size() ), ( content.size() - i ) ) );
+        return arrayString;
+    }
+
 
 };
 
@@ -374,6 +388,7 @@ struct LabyrinthPage
         toExtractBookName( product );
         toExtractImgUrl();
         toExtractDescription( product );
+        toExtractBookDescription( popup );
     }
 
     ~LabyrinthPage() 
@@ -471,6 +486,57 @@ private:
             dc = std::stoi(dABC[2]);
         }
     }
+
+    //std::string box;    // Тип упаковки
+    //std::string covers;   // Тип обложки: 7Б - твердая (плотная бумага или картон)
+    //std::string decoration;   // Оформление: Тиснение объемное
+    //std::string illustrations;  // Иллюстрации: Черно-белые + цветные
+
+    void _toExtractBox( const std::string& title, const size_t& start )
+    {
+        const size_t end = title.find("</div>");
+        box = title.substr( start - 1, ( end - start + 1) );
+    }
+
+    void _toExtractCovers( const std::string& title, const size_t& start  )
+    {
+        const size_t end = title.find("</div>");
+        covers = title.substr( start - 1, ( end - start + 1 ) );
+    }
+
+    void _toExtractDecoration( const std::string& title, const size_t& start  )
+    {
+        const size_t end = title.find("</div>");
+        decoration = title.substr( start - 1, ( end - start + 1 ) );
+    }
+
+    void _toExtractIllustrations( const std::string& title, const size_t& start  )
+    {
+        const size_t end = title.find("</div>");
+        illustrations = title.substr( start, ( end - start ) );
+    }
+
+    void toExtractBookDescription( const std::string& popup )
+    {
+        const std::vector<std::string> roll = {
+            "Тип обложки: ",
+            "Оформление: ",
+            "Иллюстрации: ",
+            "Тип упаковки: "
+        };
+        std::vector<std::string> frames = scbs.split( popup, "<div>" );
+        for( const std::string& frame : frames )
+        {
+            if( size_t s = frame.find( roll[0] ); s != std::string::npos )
+                _toExtractCovers( frame, ( s + roll[0].size() ) );
+            else if( size_t s = frame.find( roll[1] ); s != std::string::npos )
+                _toExtractDecoration( frame, ( s + roll[0].size() ) );
+            else if( size_t s = frame.find( roll[2] ); s != std::string::npos )
+                _toExtractIllustrations( frame, ( s + roll[0].size() ) );
+            else if( size_t s = frame.find( roll[3] ); s != std::string::npos )
+                _toExtractBox( frame, ( s + roll[0].size() ) );
+        }
+    }
 };
 
 const std::vector<std::string> HEADERS = {
@@ -497,8 +563,7 @@ int main()
     const int id = 877234;
     const std::string page = request.GET(URL);
     const std::string project = scbs.parseHref( page, "div", { { "id", "product" } } ).first;
-    const std::string popup = request.GET( "https://www.labirint.ru/ajax/design/877234/", HEADERS );
-    std::cout << popup << std::endl;
+    const std::string popup = request.GET( ( "https://www.labirint.ru/ajax/design/" + std::to_string(id)  + "/" ), HEADERS );
     LabyrinthPage lp( id, project, popup );
     std::cout << lp;
     //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
