@@ -498,6 +498,7 @@ int main()
     const std::string page = request.GET(URL);
     const std::string project = scbs.parseHref( page, "div", { { "id", "product" } } ).first;
     const std::string popup = request.GET( "https://www.labirint.ru/ajax/design/877234/", HEADERS );
+    std::cout << popup << std::endl;
     LabyrinthPage lp( id, project, popup );
     std::cout << lp;
     //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
