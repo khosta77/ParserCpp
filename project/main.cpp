@@ -5,9 +5,8 @@
 
 #include <curl/curl.h>
 
-#define DEBUG 0
 // https://www.labirint.ru/books/268254/?ysclid=m2hsr4d1oz760991856
-const std::string URL = "https://www.labirint.ru/books/877234/";
+const std::string URL = "https://www.labirint.ru/books/";  //849544/";  // 1017284/";  // 877234/";
 
 class Request
 {
@@ -24,7 +23,7 @@ private:
     // Функция обратного вызова для записи данных, полученных от curl
     static size_t WriteCallback( void* contents, size_t size, size_t nmemb, std::string* output )
     {
-        size_t total_size = size * nmemb;  // TODO: можно переделать
+        size_t total_size = ( size * nmemb );
         output->append( static_cast<char*>(contents), total_size );
         return total_size;
     }
@@ -52,10 +51,7 @@ public:
             {
                 struct curl_slist* headers = nullptr;
                 for( const std::string& header : headersVector )
-                {
-                    //std::cout << header << std::endl;
                     headers = curl_slist_append( headers, header.c_str() );
-                }
                 curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
             }
 
@@ -95,9 +91,11 @@ private:
         size_t i = start;
         for( ; i < content.size(); )
         {
-            returnMessage += content[i];  // TODO: переделать
             if( content[i++] == '>' )
+            {
+                returnMessage = content.substr( start, i - start );
                 break;
+            }
         }
         return std::pair<std::string, size_t>( returnMessage, i );
     }
@@ -136,17 +134,11 @@ private:
 
             if( posNextObject > posEndCurrent )
             {
-#if DEBUG
-                std::cout << posNextObject << '>' << posEndCurrent << std::endl;
-#endif
                 i = ( posEndCurrent + 1 );
                 ++count_object_end;
             }
             else
             {
-#if DEBUG
-                std::cout << posNextObject << '<' << posEndCurrent << std::endl;
-#endif
                 i = ( posNextObject + 1 );
                 ++count_object_open;
             }
@@ -184,21 +176,15 @@ public:
         while( ( block.second = content.find( tL, block.second ) ) != std::string::npos )
         {
             block = getBlockTitle( content, block.second );
-#if DEBUG
-            std::cout << "\t\tblock: " << block.first << std::endl;
-#endif
-            if( !isKeysNpos( block.first, keys ) and !keys.empty() )  // TODO: Оптимизировать
+            if( !isKeysNpos( block.first, keys ) and !keys.empty() )
             {
-#if DEBUG
-                std::cout << block.first << std::endl;
-#endif
                 size_t posEndCurrent = findEndObject( content, block.second, tL, tR );
                 if( posEndCurrent == std::string::npos )
                     return { std::string(""), -1 };
                 return { content.substr( block.second, ( posEndCurrent - block.second ) ), posEndCurrent };
             }
 
-            if( keys.empty() )  // TODO: Оптимизировать
+            if( keys.empty() )
             {
                 size_t posEndCurrent = findEndObject( content, block.second, tL, tR );
                 if( posEndCurrent == std::string::npos )
@@ -210,18 +196,9 @@ public:
     }
 
 
-    std::pair<std::string, size_t> parseHead
-    (
-        const std::string& content,
-        const std::string& object,
-        const std::vector<std::pair<std::string, std::string>> pairs,
-        const size_t& startPosition = 0
-    )
+    std::pair<std::string, size_t> parseHead( const std::string& content, const std::string& object,
+        const std::vector<std::pair<std::string, std::string>> pairs, const size_t& startPosition = 0 )
     {
-#if DEBUG
-        std::cout << content << std::endl;
-#endif
-
         if( pairs.empty() )
             return { std::string(""), -1 };
 
@@ -237,34 +214,25 @@ public:
         {
             block = getBlockTitle( content, block.second );
 
-            if( !isKeysNpos( block.first, keys ) and !keys.empty() )  // TODO: Оптимизировать
-            {
-#if DEBUG
-                std::cout << block.first << std::endl;
-#endif
-                return { block.first, ( block.second + block.first.size() ) };
-            }
-            
+            if( !isKeysNpos( block.first, keys ) and !keys.empty() )
+                return { block.first, ( block.second + block.first.size() ) }; 
         }
         return { std::string(""), -1 };
     }
 
-    std::vector<std::string> split(const std::string& content, const char& del)
+    std::vector<std::string> split( const std::string& content, const char& del )
     {
         std::vector<std::string> arrayString;
-        std::string buffer = "";
-        for (size_t i = 0, I = content.size(); i < I; ++i)
+        size_t i = 0, j = 0;
+        for( const size_t I = content.size(); i < I; ++i )
         {
-            if (content[i] != del)
-                buffer += content[i];
-            else
+            if (content[i] == del)
             {
-                arrayString.push_back(buffer);
-                buffer = "";
+                arrayString.push_back( content.substr( j, i - j ) );
+                j = ( i + 1 );
             }
         }
-        arrayString.push_back(buffer);
-        buffer.clear();
+        arrayString.push_back( content.substr( j, i - j ) );
         return arrayString;
     }
 
@@ -289,15 +257,12 @@ SCBeautifulSoup scbs;
 /*
 План парсинга такой, у нас есть большой скрин всей страницы размер N, извлекаем из него маленький блок
 размера M, где M << N и проходимся по нему мелким поиском. В случае когда мы не находим ничего empty = 1.
-
-
 */
 class Parser
 {
 public:
     static std::string unpack( const std::string& content )
     {
-        // TODO: Переделать на stringstream
         std::string text;
         bool isMark = false;
         for( auto symbol : content )
@@ -327,45 +292,45 @@ public:
 struct LabyrinthPage
 {
     //// Получаем сразу
-    int id;                   // Id книги он же в ссылке справа
+    int id;                     // + Id книги он же в ссылке справа
     
     //// Первое, что извлекаем
-    std::string typeObject;   // Объект: книга, игрушка и т. д.
-    std::string groupOfType;  // Типы объекта: Нехудож литер, игрушка и т д
-    std::string underGroup;   // Подгруппа типа: Информ технологии и т д
-    std::string genres;       // Жанр детально внутренний
+    std::string typeObject;     // + Объект: книга, игрушка и т. д.
+    std::string groupOfType;    // + Типы объекта: Нехудож литер, игрушка и т д
+    std::string underGroup;     // + Подгруппа типа: Информ технологии и т д
+    std::string genres;         // + Жанр детально внутренний
 
     //// Обработка описания
-    std::string bookName;       // Название книги
+    std::string bookName;       // + Название книги
     
-    std::string imgUrl;
+    std::string imgUrl;         // +
 
     //// Description
-    std::string age;
-    std::string authors;  // Авторы
-    std::string publisher; // Издатель
-    int datePublisher;  // Дата издания
-    std::string series;
-    std::string bookGenres;  // Жанр книг
+    std::string age;            // +
+    std::string authors;        // + Авторы
+    std::string publisher;      // + Издатель
+    int datePublisher;          // + Дата издания
+    std::string series;         // +
+    std::string bookGenres;     // + Жанр книг
     
-    float allPrice;     // цена для всех
-    float myPrice;      // моя цена
-    float sale;         // скидка
+    float allPrice;             // + цена для всех
+    float myPrice;              // + моя цена
+    float sale;                 // + скидка
     
-    std::string isbn;  // ISBN: 978-5-9693-0549-6
-    std::string pages;
-    std::string pageType;  // Оффсет, бумага и т. д.
+    std::string isbn;           // + ISBN: 978-5-9693-0549-6
+    std::string pages;          // +
+    std::string pageType;       // + Оффсет, бумага и т. д.
 
-    std::string weight;  // Масса
-    int da;  // Размеры
-    int db;
-    int dc;
+    std::string weight;         // + Масса
+    int da;                     // + Размеры
+    int db;                     // +
+    int dc;                     // +
 
     //// ajax/design
-    std::string box;    // Тип упаковки
-    std::string covers;   // Тип обложки: 7Б - твердая (плотная бумага или картон)
-    std::string decoration;   // Оформление: Тиснение объемное
-    std::string illustrations;  // Иллюстрации: Черно-белые + цветные
+    std::string box;            // + Тип упаковки
+    std::string covers;         // + Тип обложки: 7Б - твердая (плотная бумага или картон)
+    std::string decoration;     // + Оформление: Тиснение объемное
+    std::string illustrations;  // + Иллюстрации: Черно-белые + цветные
 
     //// rate
     std::string rate;
@@ -380,9 +345,7 @@ struct LabyrinthPage
     std::string RtB5;
 
 
-    LabyrinthPage( [[maybe_unused]] const int& idIn,
-                   [[maybe_unused]] const std::string& product,
-                   [[maybe_unused]] const std::string& popup ) : id(idIn)
+    LabyrinthPage( const int& idIn, const std::string& product, const std::string& popup ) : id(idIn)
     {
         toExtractObject( product );
         toExtractBookName( product );
@@ -397,7 +360,29 @@ struct LabyrinthPage
         groupOfType.clear();
         underGroup.clear();
         genres.clear();
-
+        bookName.clear();
+        imgUrl.clear();
+        age.clear();
+        authors.clear();
+        publisher.clear();
+        series.clear();
+        bookGenres.clear();
+        isbn.clear();
+        pages.clear();
+        pageType.clear();
+        weight.clear();
+        box.clear();
+        covers.clear();
+        decoration.clear();
+        illustrations.clear();
+        rate.clear();
+        rateSize.clear();
+        annotation.clear();
+        RtB1.clear();
+        RtB2.clear();
+        RtB3.clear();
+        RtB4.clear();
+        RtB5.clear();
     }
 private:
     void toExtractObject( const std::string& product )
@@ -452,19 +437,24 @@ private:
         if( _description.empty() )
             return;
         age = scbs.parseHref( _description, "div", { { "id", "age_dopusk" } } ).first;
+        
         authors = scbs.parseHref( _description, "a", { { "data-event-label", "author" } } ).first;
+        
         auto _publisher = scbs.parseHref( _description, "a", { { "data-event-label", "publisher" } } );
         publisher = _publisher.first;
+        
         datePublisher = std::stoi( _description.substr( ( _publisher.second + 6 ), 4 ) );
-
-//// TODO: Тут встатить : https://www.labirint.ru/books/1017284/
+        
+        series = scbs.parseHref( _description, "a", { { "data-event-label", "series" } } ).first;
+        
+        bookGenres = scbs.parseHref( _description, "a", { { "data-event-label", "genre" } } ).first;
 
         allPrice = std::stof( scbs.parseHref( _description, "span", { { "class", "buying-priceold-val-number" } } ).first );
         myPrice = std::stof( scbs.parseHref( _description, "span", { { "class", "buying-pricenew-val-number" } } ).first );
         sale = ( myPrice / allPrice * 100.0 );
+        
         isbn = scbs.parseHref( _description, "div", { { "class", "isbn" } } ).first.substr( 6 );
 
-        // Страниц: 672 (Офсет) &mdash; прочитаете за <span class='js-o
         std::string _pages =  scbs.parseHref( _description, "div", { { "class", "pages2" } } ).first; 
         pages = _pages.substr( ( _pages.find("Страниц: ") + 16 ), 4 );
         size_t start = ( _pages.find('(') + 1 );
@@ -478,7 +468,11 @@ private:
         end = _d.find( ' ', start );
         std::vector<std::string> dABC = scbs.split( _d.substr(start, end - start), 'x' );
         if( dABC.size() != 3 )
-            throw;// TODO:
+        {
+            da = -1;
+            db = -1;
+            dc = -1;
+        }
         else
         {
             da = std::stoi(dABC[0]);
@@ -560,20 +554,12 @@ std::ostream& operator<<( std::ostream& os, const LabyrinthPage& lp )
 
 int main()
 {
-    const int id = 877234;
-    const std::string page = request.GET(URL);
+    const int id = 1017284;  //877234
+    const std::string page = request.GET( ( URL + std::to_string(id) + "/" ) );
     const std::string project = scbs.parseHref( page, "div", { { "id", "product" } } ).first;
     const std::string popup = request.GET( ( "https://www.labirint.ru/ajax/design/" + std::to_string(id)  + "/" ), HEADERS );
     LabyrinthPage lp( id, project, popup );
     std::cout << lp;
-    //std::cout << parseHref( content, "div", { { "id", "fullannotation" } } ) << std::endl;
-    //std::cout << parseHref( content, "span", { { "class", "buying-pricenew-val-number" } } ) << std::endl;
-    //std::cout << parseHref( content, "div", { { "id", "product-image" } } ) << std::endl;
-//    std::cout << scbs.parseHref( content, "div", { { "id", "product" } } ) << std::endl;
-//    std::cout << parseHref( content, "", { { "", "" } } ) << std::endl;
-    //std::cout << request.GET("https://www.labirint.ru/ajax/design/781041/") << std::endl;
-    //std::cout << scbs.parseHref( content, "div", { { "class", "popup" } } );
-    //std::cout << request.GET( "https://www.labirint.ru/ajax/design/877234/", HEADERS );
     return 0;
 }
 
