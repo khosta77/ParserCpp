@@ -5,8 +5,7 @@
 
 #include <curl/curl.h>
 
-// https://www.labirint.ru/books/268254/?ysclid=m2hsr4d1oz760991856
-const std::string URL = "https://www.labirint.ru/books/";  //849544/";  // 1017284/";  // 877234/";
+const std::string URL = "https://www.labirint.ru/books/";
 
 class Request
 {
@@ -220,36 +219,6 @@ public:
         return { std::string(""), -1 };
     }
 
-    std::vector<std::string> split( const std::string& content, const char& del )
-    {
-        std::vector<std::string> arrayString;
-        size_t i = 0, j = 0;
-        for( const size_t I = content.size(); i < I; ++i )
-        {
-            if (content[i] == del)
-            {
-                arrayString.push_back( content.substr( j, i - j ) );
-                j = ( i + 1 );
-            }
-        }
-        arrayString.push_back( content.substr( j, i - j ) );
-        return arrayString;
-    }
-
-    std::vector<std::string> split(const std::string& content, const std::string& del)
-    {
-        std::vector<std::string> arrayString;
-        size_t i = 0, j = content.find(del);
-        for( const size_t I = content.size(); i < I and j != std::string::npos; j = content.find( del, ( i + 1 ) ) )
-        {
-            arrayString.push_back( content.substr( i, ( j - i ) ) );
-            i = j;
-        }
-        arrayString.push_back( content.substr( ( i + del.size() ), ( content.size() - i ) ) );
-        return arrayString;
-    }
-
-
 };
 
 RequestCurl request;
@@ -286,6 +255,45 @@ public:
         }
         return text;
     }
+
+    static std::vector<std::string> split( const std::string& content, const char& del )
+    {
+        std::vector<std::string> arrayString;
+        size_t i = 0, j = 0;
+        for( const size_t I = content.size(); i < I; ++i )
+        {
+            if (content[i] == del)
+            {
+                arrayString.push_back( content.substr( j, i - j ) );
+                j = ( i + 1 );
+            }
+        }
+        arrayString.push_back( content.substr( j, i - j ) );
+        return arrayString;
+    }
+
+    static std::vector<std::string> split(const std::string& content, const std::string& del)
+    {
+        std::vector<std::string> arrayString;
+        size_t i = 0, j = content.find(del);
+        for( const size_t I = content.size(); i < I and j != std::string::npos; j = content.find( del, ( i + 1 ) ) )
+        {
+            arrayString.push_back( content.substr( i, ( j - i ) ) );
+            i = j;
+        }
+        arrayString.push_back( content.substr( ( i + del.size() ), ( content.size() - i ) ) );
+        return arrayString;
+    }
+
+    static void fastClear( std::string& content, const std::string& del )
+    {
+        for( size_t i = content.find(del); i != std::string::npos; i = content.find(del) )
+        {
+            for( size_t j = i, J = ( i + del.size() ); j < J; ++j )
+                content[j] = ' ';
+        }
+    }
+
 };
 
 
@@ -333,17 +341,9 @@ struct LabyrinthPage
     std::string illustrations;  // + Иллюстрации: Черно-белые + цветные
 
     //// rate
-    std::string rate;
-    std::string rateSize;
-    std::string annotation;
-
-    //// RtB Five reasons to buy
-    std::string RtB1;
-    std::string RtB2;
-    std::string RtB3;
-    std::string RtB4;
-    std::string RtB5;
-
+    float rate;                 // +
+    int rateSize;               // +
+    std::string annotation;     // +
 
     LabyrinthPage( const int& idIn, const std::string& product, const std::string& popup ) : id(idIn)
     {
@@ -352,6 +352,8 @@ struct LabyrinthPage
         toExtractImgUrl();
         toExtractDescription( product );
         toExtractBookDescription( popup );
+        toExtractRate( product );
+        toExtractAnnotation( product );
     }
 
     ~LabyrinthPage() 
@@ -375,14 +377,7 @@ struct LabyrinthPage
         covers.clear();
         decoration.clear();
         illustrations.clear();
-        rate.clear();
-        rateSize.clear();
         annotation.clear();
-        RtB1.clear();
-        RtB2.clear();
-        RtB3.clear();
-        RtB4.clear();
-        RtB5.clear();
     }
 private:
     void toExtractObject( const std::string& product )
@@ -436,37 +431,58 @@ private:
         std::string _description  = scbs.parseHref( product, "div", { { "class", "product-description" } } ).first;
         if( _description.empty() )
             return;
+        std::pair<std::string, size_t> _b;
+        size_t start = 0, end = 0;
         age = scbs.parseHref( _description, "div", { { "id", "age_dopusk" } } ).first;
         
         authors = scbs.parseHref( _description, "a", { { "data-event-label", "author" } } ).first;
         
-        auto _publisher = scbs.parseHref( _description, "a", { { "data-event-label", "publisher" } } );
-        publisher = _publisher.first;
-        
-        datePublisher = std::stoi( _description.substr( ( _publisher.second + 6 ), 4 ) );
-        
+        _b = scbs.parseHref( _description, "a", { { "data-event-label", "publisher" } } );
+        if( _b.second != std::string::npos )
+        {
+            publisher = _b.first;
+            datePublisher = std::stoi( _description.substr( ( _b.second + 6 ), 4 ) );
+        }
+
         series = scbs.parseHref( _description, "a", { { "data-event-label", "series" } } ).first;
-        
         bookGenres = scbs.parseHref( _description, "a", { { "data-event-label", "genre" } } ).first;
 
-        allPrice = std::stof( scbs.parseHref( _description, "span", { { "class", "buying-priceold-val-number" } } ).first );
-        myPrice = std::stof( scbs.parseHref( _description, "span", { { "class", "buying-pricenew-val-number" } } ).first );
-        sale = ( myPrice / allPrice * 100.0 );
+        _b = scbs.parseHref( _description, "span", { { "class", "buying-priceold-val-number" } } );
+        allPrice = ( ( _b.second != std::string::npos ) ? std::stof(std::move(_b.first)) : 0.0 );
+        _b = scbs.parseHref( _description, "span", { { "class", "buying-pricenew-val-number" } } );
+        myPrice = ( ( _b.second != std::string::npos ) ? std::stof(std::move(_b.first)) : 0.0 );
+        sale = ( ( allPrice != 0.0 ) ? ( myPrice / allPrice * 100.0 ) : 0.0 );
         
-        isbn = scbs.parseHref( _description, "div", { { "class", "isbn" } } ).first.substr( 6 );
+        _b = scbs.parseHref( _description, "div", { { "class", "isbn" } } );
+        if( _b.second != std::string::npos )
+        {
+            start = 6;
+            end = _b.first.find("&");
+            isbn = ( ( end == std::string::npos ) ? _b.first.substr( start ) : _b.first.substr( start, ( end - start ) ) );
+        }
 
-        std::string _pages =  scbs.parseHref( _description, "div", { { "class", "pages2" } } ).first; 
-        pages = _pages.substr( ( _pages.find("Страниц: ") + 16 ), 4 );
-        size_t start = ( _pages.find('(') + 1 );
-        size_t end = ( _pages.find(')') - start );
-        pageType = _pages.substr( start, end );
+        _b = scbs.parseHref( _description, "div", { { "class", "pages2" } } );
+        if( _b.second != std::string::npos )
+        {
+            std::string _pages = std::move(_b.first); 
+            size_t start_x = ( _pages.find("Страниц: ") + 16 );
+            start = ( _pages.find('(') + 1 );
+            pages = _pages.substr( start_x, ( start - start_x - 2 ) );
+            end = ( _pages.find(')') - start );
+            pageType = _pages.substr( start, end );
+        }
 
-        weight = scbs.parseHref( _description, "div", { { "class", "weight" } } ).first.substr(12, 4);
-
+        _b = scbs.parseHref( _description, "div", { { "class", "weight" } } );
+        if( _b.second != std::string::npos )
+        {
+            start = 12;
+            end = _b.first.find(" г");
+            weight = _b.first.substr( start, ( end - start ) );
+        }
         std::string _d = scbs.parseHref( _description, "div", { { "class", "dimensions" } } ).first;
         start = (_d.find(' ') + 1);
         end = _d.find( ' ', start );
-        std::vector<std::string> dABC = scbs.split( _d.substr(start, end - start), 'x' );
+        std::vector<std::string> dABC = Parser::split( _d.substr(start, end - start), 'x' );
         if( dABC.size() != 3 )
         {
             da = -1;
@@ -480,11 +496,6 @@ private:
             dc = std::stoi(dABC[2]);
         }
     }
-
-    //std::string box;    // Тип упаковки
-    //std::string covers;   // Тип обложки: 7Б - твердая (плотная бумага или картон)
-    //std::string decoration;   // Оформление: Тиснение объемное
-    //std::string illustrations;  // Иллюстрации: Черно-белые + цветные
 
     void _toExtractBox( const std::string& title, const size_t& start )
     {
@@ -518,7 +529,7 @@ private:
             "Иллюстрации: ",
             "Тип упаковки: "
         };
-        std::vector<std::string> frames = scbs.split( popup, "<div>" );
+        std::vector<std::string> frames = Parser::split( popup, "<div>" );
         for( const std::string& frame : frames )
         {
             if( size_t s = frame.find( roll[0] ); s != std::string::npos )
@@ -530,6 +541,39 @@ private:
             else if( size_t s = frame.find( roll[3] ); s != std::string::npos )
                 _toExtractBox( frame, ( s + roll[0].size() ) );
         }
+    }
+
+    void toExtractRate( const std::string& product )
+    {
+        std::pair<std::string, size_t> _b;
+        
+        _b = scbs.parseHref( product, "div", { { "id", "rate" } } );
+        rate = ( ( _b.second != std::string::npos ) ? std::stof(std::move(_b.first)) : 0.0 );
+    
+        _b = scbs.parseHref( product, "div", { { "id", "product-rating-marks-label" } } );
+        if( _b.second != std::string::npos )
+        {
+            size_t start = ( _b.first.find(":") + 1 );
+            size_t end = _b.first.find(")");
+            rateSize = std::stoi( _b.first.substr( start, end - start ) );
+        }
+        else
+            rateSize = 0.0;
+    }
+
+    void toExtractAnnotation( const std::string& product )
+    {
+        std::pair<std::string, size_t> buffer = scbs.parseHref( product, "div", { { "id", "fullannotation" } } );
+        annotation = ( ( buffer.second != std::string::npos ) ? buffer.first : scbs.parseHref(
+                    product, "div", { { "id", "product-about" } } ).first );
+
+        size_t start = ( annotation.find("<p>") + 3 );
+        size_t end = annotation.find("<div class=\"product-about-bubble\">");
+        if( end == std::string::npos )
+            end = annotation.find("</p>");
+        annotation = annotation.substr( start, ( end - start ) );
+        Parser::fastClear( annotation, "<br/>" );
+        Parser::fastClear( annotation, "\n" );
     }
 };
 
@@ -547,14 +591,13 @@ std::ostream& operator<<( std::ostream& os, const LabyrinthPage& lp )
        << lp.bookGenres << del << lp.allPrice << del << lp.myPrice << del << lp.sale << del << lp.isbn << del
        << lp.pages << del << lp.pageType << del << lp.weight << del << lp.da << del << lp.db << del
        << lp.dc << del << lp.box << del << lp.covers << del << lp.decoration << del << lp.illustrations << del
-       << lp.rate << del << lp.rateSize << del << lp.annotation << del << lp.RtB1 << del << lp.RtB2 << del
-       << lp.RtB3 << del << lp.RtB4 << del << lp.RtB5 << '\n';
+       << lp.rate << del << lp.rateSize << del << lp.annotation << '\n';
     return os;
 }
 
 int main()
 {
-    const int id = 1017284;  //877234
+    const int id = 1017284;  // 1017284;  //877234
     const std::string page = request.GET( ( URL + std::to_string(id) + "/" ) );
     const std::string project = scbs.parseHref( page, "div", { { "id", "product" } } ).first;
     const std::string popup = request.GET( ( "https://www.labirint.ru/ajax/design/" + std::to_string(id)  + "/" ), HEADERS );
