@@ -32,6 +32,10 @@ SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
 add_executable(
     main.out
     ./project/main.cpp
+    ./project/requestcurl.cpp
+    ./project/soup.cpp
+    ./project/parser.cpp
+    ./project/page.cpp
     )
 
 # Включение заголовочных файлов и библиотек
