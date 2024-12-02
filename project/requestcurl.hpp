@@ -5,6 +5,8 @@
 
 #include <curl/curl.h>
 
+#include <format>
+
 class RequestCurl : public Request
 {
 private:
