@@ -36,11 +36,16 @@ std::string RequestCurl::GET( const std::string& url, const std::vector<std::str
         curl_easy_setopt( curl, CURLOPT_WRITEDATA, &content );
 
         if( CURLcode res = curl_easy_perform(curl); res != CURLE_OK )
-        {    // not good!!!
-            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        {
+            //std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;  // not good!!!
             curl_easy_cleanup(curl);
             curl_global_cleanup();
-            throw std::out_of_range("Выход за пределы curl!!!");    
+            throw std::out_of_range(
+                        std::format(
+                                "curl_easy_perform() failed: {}",
+                                curl_easy_strerror(res)
+                            )
+                    );  // very good!!!
         }
 
         curl_easy_cleanup(curl);
@@ -50,8 +55,7 @@ std::string RequestCurl::GET( const std::string& url, const std::vector<std::str
 
     curl_global_cleanup();
     content.clear();
-    std::cerr << "curl_easy_perform() failed: somebroblem" << std::endl;
-    throw std::out_of_range("Выход за пределы curl!!!");
+    throw std::out_of_range( "curl_easy_perform() failed: somebroblem" );
     return content;
 }
 
