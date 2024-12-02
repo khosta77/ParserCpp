@@ -49,6 +49,12 @@ bool LabyrinthPage::operator()( const int& i )
             _headers
         );
 
+    if( !toExtractAnnotation( product ) )
+    {
+        page.clear();
+        product.clear();
+        return false;
+    }
     id = i;
     toExtractObject( product );
     toExtractBookName( product );
@@ -57,8 +63,6 @@ bool LabyrinthPage::operator()( const int& i )
     if( popup.find("Страница, которую вы ищете, затерялась в Лабиринте :(") == std::string::npos )
         toExtractBookDescription( popup );
     toExtractRate( product );
-    toExtractAnnotation( product );
-
 
     page.clear();
     product.clear();
@@ -286,7 +290,16 @@ void LabyrinthPage::toExtractRate( const std::string& product )
         rateSize = 0.0;
 }
 
-void LabyrinthPage::toExtractAnnotation( const std::string& product )
+static std::vector<std::string> stopWords = {
+    "<br/>",
+    "<noindex>",
+    "</noindex>",
+    "<em>",
+    "</em>",
+    "\n"
+};
+
+bool LabyrinthPage::toExtractAnnotation( const std::string& product )
 {
     std::pair<std::string, size_t> buffer = _scbs_.parseHref( product, "div", { { "id",
                                                                                   "fullannotation" } } );
@@ -297,8 +310,8 @@ void LabyrinthPage::toExtractAnnotation( const std::string& product )
 
     if( buffer.first.empty() )
     {
-        std::cerr << std::format("\tBook {}, haven't annotation\n", id );
-        return;
+        //std::cerr << std::format("\tBook {}, haven't annotation\n", id );
+        return false;
     }
     
     annotation = std::move(buffer.first);
@@ -307,12 +320,9 @@ void LabyrinthPage::toExtractAnnotation( const std::string& product )
     if( end == std::string::npos )
         end = annotation.find("</p>");
     annotation = annotation.substr( start, ( end - start ) );
-    _parser_.fastClear( annotation, "<br/>" );
-    _parser_.fastClear( annotation, "<noindex>" );
-    _parser_.fastClear( annotation, "</noindex>" );
-    _parser_.fastClear( annotation, "<em>" );
-    _parser_.fastClear( annotation, "</em>" );
-    _parser_.fastClear( annotation, "\n" );
+    for( const std::string& stopWord : stopWords )
+        _parser_.fastClear( annotation, stopWord );
+    return true;
 }
 
 

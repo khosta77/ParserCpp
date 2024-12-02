@@ -74,28 +74,17 @@ public:
     void clear();
 
 private:
-
+    bool toExtractAnnotation( const std::string& );
     void toExtractObject( const std::string& );
-
     void toExtractBookName( const std::string& );
-
     void toExtractImgUrl();
-
     void toExtractDescription( const std::string& );
-
-    void _toExtractBox( const std::string&, const size_t& );
-
-    void _toExtractCovers( const std::string&, const size_t& );
-
-    void _toExtractDecoration( const std::string&, const size_t& );
-
-    void _toExtractIllustrations( const std::string&, const size_t& );
-
     void toExtractBookDescription( const std::string& );
-
+    void _toExtractBox( const std::string&, const size_t& );
+    void _toExtractCovers( const std::string&, const size_t& );
+    void _toExtractDecoration( const std::string&, const size_t& );
+    void _toExtractIllustrations( const std::string&, const size_t& );
     void toExtractRate( const std::string& );
-
-    void toExtractAnnotation( const std::string& );
 };
 
 std::ostream& operator<<( std::ostream&, const LabyrinthPage& );
