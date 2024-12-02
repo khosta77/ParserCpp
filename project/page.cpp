@@ -9,7 +9,7 @@ std::ostream& operator<<( std::ostream& os, const LabyrinthPage& lp )
 {
     const char del = ';';
     os << lp.id << del << lp.typeObject << del << lp.groupOfType << del << lp.underGroup << del
-       << lp.genres << del << lp.bookName << del << lp.bookName << del << lp.imgUrl << del
+       << lp.genres << del << lp.bookName << del << lp.imgUrl << del
        << lp.age << del << lp.authors << del << lp.publisher << del << lp.datePublisher << del
        << lp.series << del << lp.bookGenres << del << lp.allPrice << del << lp.myPrice << del
        << lp.sale << del << lp.isbn << del << lp.pages << del << lp.pageType << del << lp.weight << del
