@@ -18,7 +18,7 @@ public:
     RequestCurl(RequestCurl&&) = delete;
     RequestCurl& operator=( const RequestCurl& ) = delete;
     RequestCurl& operator=( RequestCurl&& ) = delete;
-    ~RequestCurl();
+    ~RequestCurl() override;
 
     std::string GET( const std::string& url, const std::vector<std::string>& headersVector ) override;
 };

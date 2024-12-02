@@ -8,6 +8,7 @@
 class Request
 {
 public:
+    virtual ~Request() = default;
     virtual std::string GET( const std::string&, const std::vector<std::string>& ) = 0;
 };
 
