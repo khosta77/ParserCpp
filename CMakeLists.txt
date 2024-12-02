@@ -36,6 +36,7 @@ add_executable(
     ./project/soup.cpp
     ./project/parser.cpp
     ./project/page.cpp
+    ./project/parserpool.cpp
     )
 
 # Включение заголовочных файлов и библиотек
