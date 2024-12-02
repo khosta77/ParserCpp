@@ -17,6 +17,7 @@
 #include <exception>
 #include <future>
 #include <iomanip>
+#include <ctime> 
 
 const std::string URL = "https://www.labirint.ru/books/";
 
@@ -28,14 +29,7 @@ const std::vector<std::string> HEADERS = {
 class ParserPool
 {
 private:
-    enum class State
-    {
-        WORKING,
-        STOPPING,
-        STOPPED
-    };
 
-    State state_;
     size_t count_active_;
     std::atomic<size_t> page_i_;
     std::atomic<size_t> page_I_;
@@ -46,17 +40,34 @@ private:
     std::vector<double> timeOneIter_;
 
     std::mutex mutex_;
-    std::condition_variable cond_var_;
-    std::condition_variable cond_update_;
 
-    const std::string table = "table.csv";
+    const std::string table = "data/table.csv";
+    const std::string logger = "data/logger.log";
+
+    std::string start_time;
+
+    std::string generateTimeString()
+    {
+        std::time_t now = std::time(nullptr);
+        std::tm* localTime = std::localtime(&now);
+
+        std::ostringstream oss;
+        oss << std::setw(2) << std::setfill('0') << localTime->tm_hour << ":"
+            << std::setw(2) << std::setfill('0') << localTime->tm_min << ":"
+            << std::setw(2) << std::setfill('0') << localTime->tm_sec;
+
+        return oss.str();
+    }
+
 
 public:
-    explicit ParserPool( const size_t& N, const size_t& start, const size_t& end ) : state_(State::STOPPED),
+    explicit ParserPool( const size_t& N, const size_t& start = 0, const size_t& end = 1'200'00) :
         count_active_(N), page_i_(start), page_I_(end), balance( ( ( start != 0 ) ? start : 0 ) ), count(0)
     {
-        
-        std::ofstream out( table, ( std::ios_base::trunc ) );
+        std::cout << std::format( "Запущено {} потоков\nДиапазон значений от {} до {}\n", N, start, end );
+        start_time = generateTimeString();  // std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        // Это ужасно написано, да я знаю. Очень сильно тороплюсь....
+        std::ofstream out( table.c_str(), ( std::ios_base::trunc ) );
         if( !out.is_open() )
         {
             std::cerr << "Все очень плохо\n";
@@ -64,6 +75,13 @@ public:
         }
         out << "id;typeObject;groupOfType;underGroup;genres;bookName;imgUrl;age;authors;publisher;datePublisher;series;bookGenres;allPrice;myPrice;sale;isbn;pages;pageType;weight;da;db;dc;box;covers;decoration;illustrations;rate;rateSize;annotation\n";
         out.close();
+        std::ofstream logout( logger.c_str(), ( std::ios_base::trunc ) );
+        if( !logout.is_open() )
+        {
+            std::cerr << "Все очень плохо2\n";
+            throw;
+        }
+        logout.close();
 
         std::unique_lock<std::mutex> lock(mutex_);
         for( size_t i = 0; i < N; ++i )
@@ -71,7 +89,6 @@ public:
             threads_.emplace_back(&ParserPool::ThreadFunction, this);
         }
     }
-    // ...no copy, no move...
 
     ~ParserPool()
     {
@@ -81,9 +98,8 @@ public:
         }
     }
 
-    int progressbar()
+    int run()
     {
-        state_ = State::WORKING;
         ThreadFunction();
         return 0;
     }
@@ -111,16 +127,11 @@ private:
 
     void ThreadFunction()
     {
-        //std::unique_lock<std::mutex> lock(mutex_);
-
         SCBeautifulSoup scbs;
         Parser parser_;
         Request *req = new RequestCurl;
         LabyrinthPage labirintpage( req, scbs, parser_, URL, HEADERS );
         bool status = false;
-        std::cout << std::this_thread::get_id() << std::endl;
-        //cond_update_.wait( lock, [&]() { return ( state_ != State::WORKING ); } );
-
         for( size_t i = page_i_++, I = page_I_; i < I; i = page_i_++ )
         {
             const auto start = std::chrono::high_resolution_clock::now();
@@ -128,24 +139,31 @@ private:
             {
                 status = labirintpage( i );
             }
+            catch( const std::exception& ex )
+            {
+                saveToFile( std::format("===>{}\t{}\n", i, ex.what() ), logger );
+                continue;
+            }
             catch(...)
             {
-                std::cerr << "\t>!!!" << std::endl;
+                saveToFile( std::format("--->{}\tno std::throw, what was ???\n", i ), logger );
+                continue;
             };
             const auto end = std::chrono::high_resolution_clock::now();
             const std::chrono::duration<double, std::milli> d = end - start;
-
-            float p = round( ( ( ( i - balance ) * 1.0f ) / ( ( I - balance ) * 1.0f ) * 100.0f ) );
-            std::string stts = ( ( status ) ? "YES" : "NO" );
 
             if( status )
             {
                 std::stringstream sos;
                 sos << labirintpage;
                 saveToFile( sos.str(), table );
-                //std::cout << sos.str();
             }
-            std::cout << std::format( "  {} %\t{}/{}\tSave: {}/{}\ttime: {} ms\n", p, i, I, stts, count, d );
+
+            std::cout << std::format(
+                    "  {:>5} % [{:>7}:{:>7}] Save: {:>5}/{:>6} time: {:>12};\t{}\t{}\n",
+                    round( ( ( ( i - balance ) * 1.0f ) / ( ( I - balance ) * 1.0f ) * 100.0f ) ),
+                    i, I, ( ( status ) ? "*YES*" : "*NO*" ), count, d, start_time, generateTimeString()
+                );
         }
 
         delete req;
@@ -154,8 +172,8 @@ private:
 
 int main()
 {
-    ParserPool pp( 40, 200'000, 300'000 );
-    return pp.progressbar();
+    ParserPool pp( std::thread::hardware_concurrency() );
+    return pp.run();
 }
 
 
