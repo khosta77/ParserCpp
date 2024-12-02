@@ -3,6 +3,7 @@
 
 # Выход программы
 *.out
+*.csv
 
 # Файлы CMAKE
 CMakeCache.txt
