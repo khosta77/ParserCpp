@@ -164,6 +164,7 @@ void LabyrinthPage::toExtractDescription( const std::string& product )
     authors = _scbs_.parseHref( _description, "a", { { "data-event-label", "author" } } ).first;
     _b = _scbs_.parseHref( _description, "a", { { "data-event-label", "publisher" } } );
     
+    // Вроде здесь, а вроде и нет возникает ошибка с конвертацией строки. См логи...
     if( _b.second != std::string::npos )
     {
         publisher = _b.first;
