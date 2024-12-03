@@ -42,7 +42,7 @@ private:
     std::string generateTimeString();
 
 public:
-    explicit ParserPool( const size_t& N, const size_t& start = 0, const size_t& end = 1'200'00);
+    explicit ParserPool( const size_t& N, const size_t& start = 0, const size_t& end = 1'200'000);
     ParserPool() = delete;
     ParserPool( const ParserPool& ) = delete;
     ParserPool( ParserPool&& ) = delete;
