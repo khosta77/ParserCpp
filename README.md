@@ -1,6 +1,6 @@
 # Парсер книжного магазина лабиринт для получения данных о книгах
 
-Данные со страниц собраны в таблицу вида:
+Данные со страниц собраны в таблицу вида(Значения в примере не везде отражает действительность):
 
 | id  | typeObject | groupOfType  | underGroup | genres         | bookName               | imgUrl                | age  | authors            | publisher           | datePublisher | series         | bookGenres      | allPrice | myPrice | sale | isbn          | pages | pageType | weight | da  | db  | dc  | box  | covers | decoration | illustrations | rate | rateSize | annotation                          |
 |-----|------------|--------------|------------|----------------|------------------------|-----------------------|------|--------------------|---------------------|---------------|----------------|----------------|----------|---------|------|---------------|-------|----------|--------|-----|-----|-----|------|--------|------------|----------------|------|----------|-------------------------------------|
@@ -8,7 +8,7 @@
 | 2   | Book       | Non-fiction  | Biography  | History         | The Life of Greatness   | http://example.com/img2.jpg | 15+  | Jane Smith         | Another Publisher    | 2023-02-01   | N/A            | Biography       | 600      | 480     | 20%  | 978-1-23-456789-7 | 300   | Paperback  | 0.4kg  | 15  | 5   | 4   | No   | No     | No         | Yes            | 4.2  | 150      | An inspiring biography of a great leader. |
 | 3   | Book       | Children     | Storybook  | Fantasy         | The Magical Forest      | http://example.com/img3.jpg | 6+   | Alice Wonderland    | Kids Publisher       | 2023-03-01   | Fairy Tales    | Children        | 300      | 250     | 17%  | 978-0-12-345678-9 | 50    | Hardcover  | 0.3kg  | 5   | 3   | 2   | No   | Yes    | Yes        | No             | 4.8  | 200      | A charming story for young readers.    |
 
-~~[Ссылка на таблицу.]() пока еще не готова~~ Для github слишком большая.
+[Ссылка на таблицу.](https://cloud.mail.ru/public/Moq4/aNa2EzmBV) Для github слишком большая.
 
 Таблица с необработанными данными, в чистом виде.
 
