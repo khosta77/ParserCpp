@@ -297,7 +297,12 @@ static std::vector<std::string> stopWords = {
     "</noindex>",
     "<em>",
     "</em>",
-    "\n"
+    "\n",
+    ";",
+    "\t",
+    "\r",
+    "  ",
+    "   "
 };
 
 bool LabyrinthPage::toExtractAnnotation( const std::string& product )
